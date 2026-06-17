@@ -11,20 +11,29 @@ app.get('/login', (req, res) => {
   res.send('1160491');
 });
 
-app.post('/zipper', upload.single('file'), (req, res) => {
-  if (!req.file) {
+function zipper(req, res) {
+  if (!req.files || req.files.length === 0) {
     return res.status(400).type('text/plain').send('no file');
   }
 
-  zlib.gzip(req.file.buffer, (err, gzipped) => {
+  const file = req.files[0];
+
+  zlib.gzip(file.buffer, (err, result) => {
     if (err) {
       return res.status(500).type('text/plain').send('gzip error');
     }
 
     res.setHeader('Content-Type', 'application/gzip');
     res.setHeader('Content-Disposition', 'attachment; filename="result.gz"');
-    res.send(gzipped);
+    res.send(result);
   });
+}
+
+app.post('/zipper', upload.any(), zipper);
+app.post('/zipper/', upload.any(), zipper);
+
+app.use((err, req, res, next) => {
+  res.status(500).type('text/plain').send('server error');
 });
 
 app.listen(PORT, '0.0.0.0');
