@@ -1,7 +1,9 @@
 const express = require('express');
-const { PNG } = require('pngjs');
+const multer = require('multer');
+const zlib = require('zlib');
 
 const app = express();
+const upload = multer({ storage: multer.memoryStorage() });
 const PORT = process.env.PORT || 10000;
 
 app.get('/login', (req, res) => {
@@ -9,24 +11,20 @@ app.get('/login', (req, res) => {
   res.send('1160491');
 });
 
-app.get('/makeimage', (req, res) => {
-  const width = Math.max(1, parseInt(req.query.width, 10) || 1);
-  const height = Math.max(1, parseInt(req.query.height, 10) || 1);
-
-  const png = new PNG({ width, height });
-
-  for (let y = 0; y < height; y++) {
-    for (let x = 0; x < width; x++) {
-      const idx = (width * y + x) << 2;
-      png.data[idx] = 255;
-      png.data[idx + 1] = 255;
-      png.data[idx + 2] = 255;
-      png.data[idx + 3] = 255;
-    }
+app.post('/zipper', upload.single('file'), (req, res) => {
+  if (!req.file) {
+    return res.status(400).type('text/plain').send('no file');
   }
 
-  res.setHeader('Content-Type', 'image/png');
-  png.pack().pipe(res);
+  zlib.gzip(req.file.buffer, (err, gzipped) => {
+    if (err) {
+      return res.status(500).type('text/plain').send('gzip error');
+    }
+
+    res.setHeader('Content-Type', 'application/gzip');
+    res.setHeader('Content-Disposition', 'attachment; filename="result.gz"');
+    res.send(gzipped);
+  });
 });
 
 app.listen(PORT, '0.0.0.0');
