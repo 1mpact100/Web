@@ -1,9 +1,9 @@
 const express = require('express');
-const multer = require('multer');
+const formidable = require('formidable');
+const fs = require('fs');
 const zlib = require('zlib');
 
 const app = express();
-const upload = multer({ storage: multer.memoryStorage() });
 const PORT = process.env.PORT || 10000;
 
 app.get('/login', (req, res) => {
@@ -12,28 +12,41 @@ app.get('/login', (req, res) => {
 });
 
 function zipper(req, res) {
-  if (!req.files || req.files.length === 0) {
-    return res.status(400).type('text/plain').send('no file');
-  }
+  const form = formidable({ multiples: false });
 
-  const file = req.files[0];
-
-  zlib.gzip(file.buffer, (err, result) => {
+  form.parse(req, (err, fields, files) => {
     if (err) {
-      return res.status(500).type('text/plain').send('gzip error');
+      return res.status(500).type('text/plain').send('form parse error');
     }
 
-    res.setHeader('Content-Type', 'application/gzip');
-    res.setHeader('Content-Disposition', 'attachment; filename="result.gz"');
-    res.send(result);
+    const uploaded = Object.values(files)[0];
+
+    if (!uploaded) {
+      return res.status(400).type('text/plain').send('no file');
+    }
+
+    const file = Array.isArray(uploaded) ? uploaded[0] : uploaded;
+    const filePath = file.filepath;
+
+    fs.readFile(filePath, (readErr, data) => {
+      if (readErr) {
+        return res.status(500).type('text/plain').send('read error');
+      }
+
+      zlib.gzip(data, (zipErr, gzipped) => {
+        if (zipErr) {
+          return res.status(500).type('text/plain').send('gzip error');
+        }
+
+        res.setHeader('Content-Type', 'application/gzip');
+        res.setHeader('Content-Disposition', 'attachment; filename="result.gz"');
+        res.send(gzipped);
+      });
+    });
   });
 }
 
-app.post('/zipper', upload.any(), zipper);
-app.post('/zipper/', upload.any(), zipper);
-
-app.use((err, req, res, next) => {
-  res.status(500).type('text/plain').send('server error');
-});
+app.post('/zipper', zipper);
+app.post('/zipper/', zipper);
 
 app.listen(PORT, '0.0.0.0');
