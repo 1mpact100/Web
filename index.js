@@ -1,52 +1,50 @@
-const express = require('express');
-const formidable = require('formidable');
-const fs = require('fs');
+const http = require('http');
 const zlib = require('zlib');
+const Busboy = require('busboy');
 
-const app = express();
 const PORT = process.env.PORT || 10000;
+const LOGIN = '1160491';
 
-app.get('/login', (req, res) => {
-  res.type('text/plain; charset=utf-8');
-  res.send('1160491');
-});
+const server = http.createServer((req, res) => {
+  if (req.method === 'GET' && req.url === '/login') {
+    res.writeHead(200, {
+      'Content-Type': 'text/plain; charset=utf-8'
+    });
+    return res.end(LOGIN);
+  }
 
-function zipper(req, res) {
-  const form = formidable({ multiples: false });
+  if (req.method === 'POST' && req.url === '/zipper') {
+    const bb = Busboy({ headers: req.headers });
+    const chunks = [];
 
-  form.parse(req, (err, fields, files) => {
-    if (err) {
-      return res.status(500).type('text/plain').send('form parse error');
-    }
+    bb.on('file', (name, file) => {
+      file.on('data', chunk => chunks.push(chunk));
+    });
 
-    const uploaded = Object.values(files)[0];
+    bb.on('close', () => {
+      const input = Buffer.concat(chunks);
 
-    if (!uploaded) {
-      return res.status(400).type('text/plain').send('no file');
-    }
-
-    const file = Array.isArray(uploaded) ? uploaded[0] : uploaded;
-    const filePath = file.filepath;
-
-    fs.readFile(filePath, (readErr, data) => {
-      if (readErr) {
-        return res.status(500).type('text/plain').send('read error');
-      }
-
-      zlib.gzip(data, (zipErr, gzipped) => {
-        if (zipErr) {
-          return res.status(500).type('text/plain').send('gzip error');
+      zlib.gzip(input, (err, gzipped) => {
+        if (err) {
+          res.writeHead(500, { 'Content-Type': 'text/plain' });
+          return res.end('gzip error');
         }
 
-        res.setHeader('Content-Type', 'application/gzip');
-        res.setHeader('Content-Disposition', 'attachment; filename="result.gz"');
-        res.send(gzipped);
+        res.writeHead(200, {
+          'Content-Type': 'application/gzip',
+          'Content-Disposition': 'attachment; filename="result.gz"'
+        });
+
+        res.end(gzipped);
       });
     });
-  });
-}
 
-app.post('/zipper', zipper);
-app.post('/zipper/', zipper);
+    req.pipe(bb);
+    return;
+  }
 
-app.listen(PORT, '0.0.0.0');
+  res.writeHead(404, { 'Content-Type': 'text/plain' });
+  res.end('not found');
+});
+
+server.listen(PORT, '0.0.0.0');
