@@ -37,31 +37,19 @@ app.get('/', (req, res) => {
 <head>
 <meta charset="UTF-8">
 <title>1160491</title>
-<script defer>
-let n = 0;
-async function tr() {
-  const input = document.querySelector('input');
-  const h1 = document.querySelector('h1');
-  const v = input.value.trim();
-  const k = ++n;
-
-  if (!v) {
-    h1.textContent = '';
-    return;
-  }
-
-  const r = await fetch('/translate?text=' + encodeURIComponent(v));
-  const t = await r.text();
-
-  if (k === n) h1.textContent = t;
+<script>
+async function run(){
+  const i = document.querySelector('input');
+  const h = document.querySelector('h1');
+  const r = await fetch('/translate?text=' + encodeURIComponent(i.value));
+  h.textContent = await r.text();
 }
-
-window.addEventListener('DOMContentLoaded', () => {
-  const input = document.querySelector('input');
-  input.oninput = tr;
-  input.onchange = tr;
-  input.onkeyup = tr;
-});
+window.onload = () => {
+  const i = document.querySelector('input');
+  i.oninput = run;
+  i.onchange = run;
+  i.onkeyup = run;
+};
 </script>
 </head>
 <body><input><h1></h1></body>
