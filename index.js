@@ -32,27 +32,73 @@ app.get('/translate', async (req, res) => {
 
 app.get('/', (req, res) => {
   res.setHeader('Content-Type', 'text/html; charset=UTF-8');
-  res.end(`<!doctype html>
-<html>
+  res.end(`<!doctype html><html lang="ru">
 <head>
 <meta charset="UTF-8">
 <title>1160491</title>
-<script>
-async function run(){
-  const i = document.querySelector('input');
-  const h = document.querySelector('h1');
-  const r = await fetch('/translate?text=' + encodeURIComponent(i.value));
-  h.textContent = await r.text();
-}
-window.onload = () => {
-  const i = document.querySelector('input');
-  i.oninput = run;
-  i.onchange = run;
-  i.onkeyup = run;
-};
-</script>
 </head>
-<body><input><h1></h1></body>
+<body>
+<input>
+<h1></h1>
+
+<script>
+const input = document.querySelector("input");
+const heading = document.querySelector("h1");
+
+const translations = {
+  привет: "hello",
+  мир: "world",
+  кот: "cat",
+  кошка: "cat",
+  собака: "dog",
+  слон: "elephant",
+  дом: "house",
+  книга: "book",
+  яблоко: "apple",
+  машина: "car",
+  человек: "person",
+  проверка: "test",
+  перевод: "translation",
+  слово: "word",
+  язык: "language",
+  окно: "window",
+  вода: "water",
+  солнце: "sun",
+  школа: "school",
+  друг: "friend"
+};
+
+async function translate() {
+  const word = input.value.trim().toLowerCase();
+
+  if (!word) {
+    heading.textContent = "";
+    return;
+  }
+
+  if (translations[word]) {
+    heading.textContent = translations[word];
+    return;
+  }
+
+  try {
+    const response = await fetch(
+      "https://api.mymemory.translated.net/get?q=" +
+      encodeURIComponent(word) +
+      "&langpair=ru%7Cen"
+    );
+    const data = await response.json();
+    heading.textContent = data.responseData.translatedText.toLowerCase();
+  } catch {
+    heading.textContent = "";
+  }
+}
+
+input.addEventListener("input", translate);
+input.addEventListener("change", translate);
+input.addEventListener("keyup", translate);
+</script>
+</body>
 </html>`);
 });
 
