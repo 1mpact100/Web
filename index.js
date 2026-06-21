@@ -1,11 +1,23 @@
 const express = require('express');
+const translate = require('translate-google-api');
 
 const app = express();
 const PORT = process.env.PORT || 10000;
 
-app.get('/login', (req, res) => {
-  res.type('text/plain; charset=utf-8');
-  res.send('1160491');
+app.get('/translate', async (req, res) => {
+  try {
+    const text = req.query.text || '';
+
+    const result = await translate(text, {
+      from: 'ru',
+      to: 'en'
+    });
+
+    res.type('text/plain; charset=utf-8');
+    res.send(result[0] || '');
+  } catch {
+    res.status(500).send('');
+  }
 });
 
 app.get('/', (req, res) => {
@@ -22,27 +34,24 @@ app.get('/', (req, res) => {
 
   <script>
     const input = document.querySelector('input');
-    const header = document.querySelector('h1');
+    const h1 = document.querySelector('h1');
 
     input.addEventListener('input', async () => {
       const word = input.value.trim();
 
       if (!word) {
-        header.textContent = '';
+        h1.textContent = '';
         return;
       }
 
       try {
         const response = await fetch(
-          'https://api.mymemory.translated.net/get?q=' +
-          encodeURIComponent(word) +
-          '&langpair=ru|en'
+          '/translate?text=' + encodeURIComponent(word)
         );
 
-        const data = await response.json();
-        header.textContent = data.responseData.translatedText;
+        h1.textContent = await response.text();
       } catch {
-        header.textContent = '';
+        h1.textContent = '';
       }
     });
   </script>
