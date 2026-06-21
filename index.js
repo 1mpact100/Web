@@ -1,50 +1,53 @@
-const http = require('http');
-const zlib = require('zlib');
-const Busboy = require('busboy');
+const express = require('express');
 
+const app = express();
 const PORT = process.env.PORT || 10000;
-const LOGIN = '1160491';
 
-const server = http.createServer((req, res) => {
-  if (req.method === 'GET' && req.url === '/login') {
-    res.writeHead(200, {
-      'Content-Type': 'text/plain; charset=utf-8'
-    });
-    return res.end(LOGIN);
-  }
-
-  if (req.method === 'POST' && req.url === '/zipper') {
-    const bb = Busboy({ headers: req.headers });
-    const chunks = [];
-
-    bb.on('file', (name, file) => {
-      file.on('data', chunk => chunks.push(chunk));
-    });
-
-    bb.on('close', () => {
-      const input = Buffer.concat(chunks);
-
-      zlib.gzip(input, (err, gzipped) => {
-        if (err) {
-          res.writeHead(500, { 'Content-Type': 'text/plain' });
-          return res.end('gzip error');
-        }
-
-        res.writeHead(200, {
-          'Content-Type': 'application/gzip',
-          'Content-Disposition': 'attachment; filename="result.gz"'
-        });
-
-        res.end(gzipped);
-      });
-    });
-
-    req.pipe(bb);
-    return;
-  }
-
-  res.writeHead(404, { 'Content-Type': 'text/plain' });
-  res.end('not found');
+app.get('/login', (req, res) => {
+  res.type('text/plain; charset=utf-8');
+  res.send('1160491');
 });
 
-server.listen(PORT, '0.0.0.0');
+app.get('/', (req, res) => {
+  res.type('html');
+  res.send(`<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <title>1160491</title>
+</head>
+<body>
+  <input>
+  <h1></h1>
+
+  <script>
+    const input = document.querySelector('input');
+    const header = document.querySelector('h1');
+
+    input.addEventListener('input', async () => {
+      const word = input.value.trim();
+
+      if (!word) {
+        header.textContent = '';
+        return;
+      }
+
+      try {
+        const response = await fetch(
+          'https://api.mymemory.translated.net/get?q=' +
+          encodeURIComponent(word) +
+          '&langpair=ru|en'
+        );
+
+        const data = await response.json();
+        header.textContent = data.responseData.translatedText;
+      } catch {
+        header.textContent = '';
+      }
+    });
+  </script>
+</body>
+</html>`);
+});
+
+app.listen(PORT, '0.0.0.0');
